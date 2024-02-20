@@ -1,21 +1,5 @@
-# Use an Ubuntu base image that can support both Java and PostgreSQL
-FROM ubuntu:20.04
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Set your desired timezone.
-ENV TZ=Africa/Casablanca
-
-# Preconfigure selected timezone.
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# Install PostgreSQL, OpenJDK for Java, and Maven for building the Java app
-RUN apt-get update && apt-get install -y postgresql postgresql-contrib openjdk-17-jdk maven
-
-# Setup PostgreSQL (You may need to adjust this for your needs)
-ENV POSTGRES_USER=db_user
-ENV POSTGRES_PASSWORD=password
-ENV POSTGRES_DB=backend_db
+# Use an official Java base image with Maven included
+FROM maven:3.8.4-openjdk-17 as build
 
 # Copy your Java application source
 WORKDIR /app
@@ -24,14 +8,16 @@ COPY . .
 # Build your Java application
 RUN mvn package
 
-ENV DATABASE_URL postgres://db_user:password@postgres:5432/backend_db
+# Use a slim Java runtime for the final image
+FROM openjdk:17-slim
 
-# Copy the entrypoint script into the container
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+WORKDIR /app
 
-# Set the entrypoint script to run on container start
-ENTRYPOINT ["/entrypoint.sh"]
+# Copy the built application from the build stage
+COPY --from=build /app/target/*.jar /app/app.jar
 
 # Expose the port your app runs on
-EXPOSE 8080 5432
+EXPOSE 8080
+
+# Run your Java application
+CMD ["java", "-jar", "app.jar"]
