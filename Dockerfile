@@ -24,6 +24,8 @@ COPY . .
 # Build your Java application
 RUN mvn package
 
+ENV DATABASE_URL postgres://db_user:password@postgres:5432/backend_db
+
 # Copy the entrypoint script into the container
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
